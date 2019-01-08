@@ -1,0 +1,32 @@
+<html><head>
+<link rel="stylesheet" href="css/index.css">
+<link rel="stylesheet" href="css/crt.css">
+<title>fRAcTuRed</title> 
+<script type="text/javascript" src="js/main.js"></script>
+<script type="text/javascript" src="js/spook.js"></script>
+<script type="text/javascript" src="js/sam.js"></script>
+<script type="text/javascript" src="/socket.io/socket.io.js"></script>
+
+
+</head>
+<body class="" onload="">
+<input type="checkbox" id="switch">
+<label for="switch" class="switch-label" onclick="this.style.display = 'none';setTimeout(soundstart(), 5000);setTimeout(onstart, 3000);" >Turn </label>
+
+
+<div class="container">
+	<div id="tvchannel" class="overlay">AV-1</div>
+		<div id="container"class="frame screen flow">
+  			<div class="screen" id="terminal" onclick="userinput.focus();">
+    			<textarea id="userinput" style="z-index: 2;text-transform: lowercase;left: -200%; top: -500%; position: absolute;" maxlength="45" onkeypress="typeit(this, event)" onkeydown="mediascript(	event	);typeit(this, event);" onkeyup="this.value = this.value.toLowerCase();setSelectionRange(userinput.value.length,userinput.value.length);"></textarea>
+    			<textarea readonly type="text" id="setter"></textarea>
+    				<div id="getter">
+    		  			<span id="writer"></span><b class="cursor" id="cursor">H</b><div id="lineflow"></div>	
+    				</div>
+  			</div>
+		</div>
+	</div>
+	<div id="payload" style="position: absolute;top: 43%"></div>
+</div>
+</body>
+</html>

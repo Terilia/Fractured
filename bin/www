@@ -1,0 +1,202 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('project-spook:server');
+var http = require('http');
+var game = require("game")
+var fs = require('fs');
+
+var clients = []
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || '3000');
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+
+var server = http.createServer(app);
+
+function IsJsonString(str) {
+    try {
+        JSON.parse(str);
+    } catch (e) {
+        return false;
+    }
+    return true;
+}
+
+var io = require('socket.io').listen(server, {
+    pingInterval: 5000,
+    pingTimeout: 5000,
+});
+
+var activeclients = []
+var allobjects = {}
+
+io.on('connection', function connection(ws) {
+  console.log("user connected")
+    ws.ip = ws.handshake.address
+    activeclients.push(ws)
+    allobjects[ws.id] = ws
+
+    ws.on('1', function incoming(message, json, datarama) {
+      if (message == "list") {
+        output = []
+        for (var i = activeclients.length - 1; i >= 0; i--) {
+          output.push(activeclients[i].id)
+        }
+        ws.emit("list", output)
+      }
+      if (message == "screen") { 
+        if (allobjects[json]) {var screenoutput = JSON.parse(allobjects[json].lastmessage)}
+        
+        ws.emit("screen", screenoutput)
+      }
+      if (message == "screenonly") { 
+        if (allobjects[json]) {var screenoutput = JSON.parse(allobjects[json].lastmessage)}
+        
+        ws.emit("screenonly", screenoutput)
+      }
+      if (message == "setter") {
+        io.to(`${json}`).emit('message', JSON.stringify(datarama));
+      }
+      // else {
+        // console.log("sending" + message + "A message")
+          // message = JSON.parse(json)
+          // answer = {}
+          // answer.change = {}
+          // answer.change.auth = false
+          // answer.change.user = false
+          // answer.change.screen = true
+          // answer.change.program = false
+          // answer.change.html = false
+          // answer.change.scare = false
+          // answer.change.reply = false
+          // answer.change.cls = true
+          // answer.change.sam = false
+          // answer.change.password = false
+          // answer.newsletter = ""
+          // answer.sam = ""
+          // answer.auth = ""
+          // answer.user = "" 
+          // answer.screen = [message.screen]
+          // answer.program = ""
+          // answer.html = ""
+          // answer.scare = []
+          // answer.reply = ""
+          // answer.save = ""
+        // ws.to(`${message.user}`).emit('message', answer);
+      // }
+
+
+    })
+
+    ws.on('message', function incoming(message) {
+      if (IsJsonString(message)){
+          message = JSON.parse(message)
+          message.auth = ws.id
+          message = game(message)
+          if (message.save != "") {
+            var date = Date.now();
+              fs.writeFile("feedback/"+date+ ".txt", message.save, function (err) {
+                console.log('New feedback has been submitted!');
+              });
+          }
+          if (message.newsletter != "") {
+            var date = Date.now();
+              fs.writeFile("newsletter/"+date+ ".txt", message.newsletter + " " + ws.ip, function (err) {
+                console.log('New newsletter email has been submitted!');
+              });
+          }
+          message = JSON.stringify(message)
+          ws.lastmessage = message
+          allobjects[ws.id] = ws
+          ws.emit("message", message)
+         }
+    });
+    ws.on('disconnect', function close() {
+      activeclients.splice(activeclients.indexOf(ws), 1);
+    });
+
+});
+
+
+
+
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = server.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}
